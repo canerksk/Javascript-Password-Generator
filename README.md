@@ -11,4 +11,5 @@ Bootstrap 5.3, JQuery 3.6.0, SweetAlert2 kullanılmıştır.
 
 
 *Yapılacaklar;
+
 WebSQLde depolanan şifreler güvenlik amaçlı tekrar şifrelenecektir.

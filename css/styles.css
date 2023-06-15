@@ -1,0 +1,45 @@
+body{
+    font-family: 'Inter';
+    background: #fafafa;
+}
+
+.formulario{
+    align-content: center;
+    text-align: center;
+    margin: 0 auto;
+    width: 650px;
+
+}
+.form-check-input{
+    width: 30px;
+    height: 30px;
+    box-shadow: 0 0 4px;
+}
+#quantity-form{
+    margin: 0 auto;
+    width: 250px;
+    box-shadow: 0 0 3px;
+}
+#quantity{
+    text-align: center;
+}
+
+#password-div{
+    display: none;
+}
+#password{
+
+    cursor: pointer;
+    width: 450px;
+    margin: 0 auto;
+    box-shadow: 0 0 10px;
+}
+#alert-no-option{
+    display: none;
+}
+#copied-alert{
+    display: none;
+    margin: 0 auto;
+    width: 300px;
+    font-size: 20px;
+}

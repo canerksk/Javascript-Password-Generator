@@ -6,4 +6,5 @@ Yerel bilgisayarınızda bir klasör içinde tutup tarayıcınızda araç çubu�
 
 CDN kullanılmıştır, bu sebeple internet bağlantısı ihtiyacı olabilir, isteğe göre CDNler yerel depoya çekilerek çevrimdışı olarak da kullanılabilir.
 
+Bootstrap 5.3, JQuery 3.6.0, SweetAlert2 kullanılmıştır.
 Şifre kombinasyonları mevcuttur.

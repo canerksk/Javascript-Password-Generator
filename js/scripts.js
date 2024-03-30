@@ -3,52 +3,50 @@ $(document).ready(function () {
     var table = $('#table').DataTable({
         order: [[2, 'desc']],
     });
+
+    var IndexedDVersion = 3;
+    var IndexedDBName = "password-generator-db";
+    var IndexedDBTableName = "Passwords";
+
     const numbers = "0123456789";
     const lowercase = "abcdefghijklmnopqrstuwvxyz";
     const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const special = "!@&#)(%^*?";
 
-    var now = new Date();
+    var request = window.indexedDB.open(IndexedDBName, IndexedDVersion);
+    var db;
 
-    if (window.openDatabase) {
-        db = openDatabase('password-generator-db', '1.0', 'Password Generator Web SQL DB', -1);
-        db.transaction(function (tx) {
-            tx.executeSql('SELECT * FROM Passwords', [], function (tx, results) {
-                var len = results.rows.length, i;
-                for (i = 0; i < len; i++) {
-                    //console.log(results.rows.item(i).password ); 
-                    table.row.add([i, results.rows.item(i).password, results.rows.item(i).created_at]).draw(false);
-                }
-            }, null);
-        });
-    }
+    request.onerror = function (event) {
+        console.error('Veritabanı açılırken hata oluştu:', event);
+    };
 
-    //CLICK ON SUBMIT
+    request.onsuccess = function (event) {
+        console.log('Veritabanı açıldı:', event);
+        db = event.target.result;
+        loadPasswordsFromIndexedDB(); // Sayfa yüklendiğinde IndexedDB'den verileri tabloya yükle
+
+
+    };
+
+    request.onupgradeneeded = function (event) {
+        const db = event.target.result;
+        console.log("onupgradeneeded event occurred, creating object store...");
+        const objectStore = db.createObjectStore(IndexedDBTableName, {keyPath: 'id', autoIncrement: true});
+        objectStore.createIndex('password', 'password', {unique: false});
+        objectStore.createIndex('description', 'description', {unique: false});
+        objectStore.createIndex('created_at', 'created_at', {unique: false});
+        console.log("Object store created:", IndexedDBTableName);
+    };
+
     $("#generate-button").click(function (e) {
-
         e.preventDefault();
         var string = "";
-        let numchecked = false;
-        let lowerchecked = false;
-        let upperchecked = false;
-        let specialchecked = false;
+        let numchecked = $('#numbers').is(":checked");
+        let lowerchecked = $('#lowercase').is(":checked");
+        let upperchecked = $('#uppercase').is(":checked");
+        let specialchecked = $('#special').is(":checked");
 
-
-        if ($('#numbers').is(":checked"))
-            numchecked = true;
-
-        if ($('#lowercase').is(":checked"))
-            lowerchecked = true;
-
-        if ($('#uppercase').is(":checked"))
-            upperchecked = true;
-
-        if ($('#special').is(":checked"))
-            specialchecked = true;
-
-        //If any option is checked
         if (numchecked || lowerchecked || upperchecked || specialchecked) {
-            //Build string
             string = buildString(numchecked, lowerchecked, upperchecked, specialchecked);
 
             let quantity = $("#quantity").val();
@@ -57,62 +55,54 @@ $(document).ready(function () {
                 $("#quantity").val(8);
             }
 
-            //Build password
             let password = buildPassword(string, quantity);
 
-            //Show password
             $("#password").val(password);
-
-            // Copy Clipboard
             var copyText = document.getElementById("password");
             copyText.select();
             navigator.clipboard.writeText(copyText.value);
-            Toast.fire({ icon: 'success', title: 'Şifre başarıyal oluşturuldu.' });
 
-            // Web SQL
-            var now = new Date();
+            savePassword(password);
 
-            if (window.openDatabase) {
-                db = openDatabase('password-generator-db', '1.0', 'Password Generator Web SQL DB', 2 * 1024 * 1024);
-
-                db.transaction(function (tx) {
-
-                    //tx.executeSql("CREATE TABLE Passwords(ID INTEGER PRIMARY KEY,password TEXT, created_at TEXT)",[], function(tx) {}, null);
-                    tx.executeSql("INSERT INTO Passwords(password, created_at) VALUES (?,?)", [password, now], function (tx, result) { }, null);
-                    table.row.add([table.rows.length + 1, password, now]).draw(false);
-                });
-            }
-
-        }
-        else {
-            Toast.fire({ icon: 'warning', title: 'Şifre özelliği seçiniz...' });
+        } else {
+            Toast.fire({icon: 'warning', title: 'Şifre özelliği seçiniz...'});
         }
 
     });
 
+
+    function loadPasswordsFromIndexedDB() {
+        var transaction = db.transaction([IndexedDBTableName], "readonly");
+        var objectStore = transaction.objectStore(IndexedDBTableName);
+        var cursorRequest = objectStore.openCursor();
+
+        cursorRequest.onsuccess = function (event) {
+            var cursor = event.target.result;
+            if (cursor) {
+                table.row.add([cursor.key, cursor.value.password, cursor.value.created_at]).draw(false);
+                cursor.continue();
+            } else {
+                console.log("Tüm veriler yüklendi.");
+            }
+        };
+
+        cursorRequest.onerror = function (event) {
+            console.error('Veri yüklenirken hata oluştu:', event);
+        };
+    }
+
     function buildString(numchecked, lowerchecked, upperchecked, specialchecked) {
-
         let answer = "";
-
-        if (numchecked)
-            answer += numbers;
-
-        if (lowerchecked)
-            answer += lowercase;
-
-        if (upperchecked)
-            answer += uppercase;
-
-        if (specialchecked)
-            answer += special;
-
+        if (numchecked) answer += numbers;
+        if (lowerchecked) answer += lowercase;
+        if (upperchecked) answer += uppercase;
+        if (specialchecked) answer += special;
         return answer;
     }
 
     function buildPassword(string, quantity) {
         let answer = "";
         for (let i = 0; i < quantity; i++) {
-            //Returns a random integer from 0 to string.length
             const num = Math.floor(Math.random() * string.length);
             const char = string[num];
             answer += char;
@@ -120,40 +110,44 @@ $(document).ready(function () {
         return answer;
     }
 
-    //COPY PASSWORD TO CLIPBOARD
-    $("#copy").click(function (e) {
-        //this.focus();
-        //this.select();
-        try {
-            var successful = document.execCommand('password');
-        } catch (err) {
-            Toast.fire({ icon: 'error', title: 'Şifre kopyalanamadı' + err });
-        }
-        Toast.fire({ icon: 'info', title: 'Şifre kopyalandı' });
-
-    });
-
-
+    function savePassword(password) {
+        var transaction = db.transaction([IndexedDBTableName], "readwrite");
+        var objectStore = transaction.objectStore(IndexedDBTableName);
+        var now = new Date();
+        const data = {
+            password: password,
+            description: "",
+            created_at: now
+        };
+        var request = objectStore.add(data);
+        request.onsuccess = function (event) {
+            console.log('Veri eklendi:', event.target.result);
+            Toast.fire({icon: 'success', title: 'Şifre oluşturuldu'});
+            table.row.add([table.rows.length + 1, password, now]).draw(false);
+        };
+        request.onerror = function (event) {
+            console.error('Veri eklenirken hata oluştu:', event);
+        };
+        transaction.oncomplete = function (event) {
+            console.log("Transaction tamamlandı.");
+        };
+    }
 
     $("#hepsini-sil").click(function (e) {
-
-        if (window.openDatabase) {
-            db = openDatabase('password-generator-db', '1.0', 'Password Generator Web SQL DB', 2 * 1024 * 1024);
-            db.transaction(function (tx) {
-
-                tx.executeSql('SELECT * FROM Passwords', [], function (tx, results) {
-                    tx.executeSql('DROP TABLE Passwords');
-                    tx.executeSql("CREATE TABLE Passwords(ID INTEGER PRIMARY KEY,password TEXT, created_at TEXT)", [], function (tx) { }, null);
-                    table.clear().draw();
-                    Toast.fire({ icon: 'info', title: 'Tüm şifreler silindi.' });
-                }, null);
-            });
-        }
-
-
-
-
+        var transaction = db.transaction([IndexedDBTableName], "readwrite");
+        var objectStore = transaction.objectStore(IndexedDBTableName);
+        var request = objectStore.clear();
+        request.onsuccess = function (event) {
+            table.clear().draw();
+            console.log('Tüm veriler silindi:', event);
+            Toast.fire({icon: 'info', title: 'Tüm şifreler silindi.'});
+        };
+        request.onerror = function (event) {
+            console.error('Veri silinirken hata oluştu:', event);
+        };
+        transaction.oncomplete = function (event) {
+            console.log("Transaction tamamlandı.");
+        };
     });
-
 
 });

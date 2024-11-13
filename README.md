@@ -18,7 +18,6 @@ Oluşturulan şifrelere, nerede kullanıldığını hatırlama amacı ile not/a�
 
 
 EN:
-Here is the translation of the text you provided:
 
 It is a password generator that can be used both online and offline. The generated passwords are stored in the browser's IndexedDB, and they will remain in the browser's database indefinitely unless you reset the browser or choose the option to delete all passwords from within the application.
 
